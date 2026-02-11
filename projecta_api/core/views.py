@@ -7,6 +7,7 @@ from accounts.models import User
 from .models import Appointment, MedicalRecord
 from .permissions import IsOwnerPatientOrOwnerDoctorOrAdmin
 from .serializers import AppointmentSerializer, MedicalRecordSerializer
+# from .tasks import create_projectb_conversation_for_appointment
 
 
 class AppointmentViewSet(viewsets.ModelViewSet):
@@ -25,6 +26,10 @@ class AppointmentViewSet(viewsets.ModelViewSet):
             return qs.filter(doctor_id=user.id)
 
         return qs.none()
+
+    # def perform_create(self, serializer):
+    #     appt = serializer.save()
+    #     create_projectb_conversation_for_appointment.delay(appt.id)
 
 
 class MedicalRecordViewSet(viewsets.ModelViewSet):

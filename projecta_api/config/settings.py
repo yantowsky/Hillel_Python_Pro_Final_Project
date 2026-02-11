@@ -25,7 +25,7 @@ INSTALLED_APPS = [
     'rest_framework',
 
     'accounts',
-    'core',
+    'core.apps.CoreConfig',
 ]
 
 MIDDLEWARE = [
@@ -95,3 +95,12 @@ SIMPLE_JWT = {
     "ACCESS_TOKEN_LIFETIME": timedelta(minutes=30),
     "REFRESH_TOKEN_LIFETIME": timedelta(days=7),
 }
+
+# Celery
+CELERY_BROKER_URL = os.getenv("CELERY_BROKER_URL", "redis://127.0.0.1:6379/0")
+CELERY_RESULT_BACKEND = os.getenv("CELERY_RESULT_BACKEND", CELERY_BROKER_URL)
+
+# ProjectB integration (JWT)
+PROJECTB_BASE_URL = os.getenv("PROJECTB_BASE_URL", "http://127.0.0.1:8001")
+PROJECTB_SERVICE_USERNAME = os.getenv("PROJECTB_SERVICE_USERNAME", "<PROJECTB_SERVICE_USERNAME>")
+PROJECTB_SERVICE_PASSWORD = os.getenv("PROJECTB_SERVICE_PASSWORD", "<PROJECTB_SERVICE_PASSWORD>")
