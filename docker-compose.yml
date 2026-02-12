@@ -3,15 +3,22 @@ services:
     image: redis:7-alpine
     ports:
       - "6379:6379"
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 3s
+      timeout: 3s
+      retries: 20
 
   db_a:
     image: postgres:16-alpine
     environment:
       POSTGRES_DB: projecta
       POSTGRES_USER: projecta
-      POSTGRES_PASSWORD: <POSTGRES_PASSWORD>
+      POSTGRES_PASSWORD: "${POSTGRES_PASSWORD}"
     ports:
       - "5433:5432"
+    volumes:
+      - db_a_data:/var/lib/postgresql/data
     healthcheck:
       test: ["CMD-SHELL", "pg_isready -U projecta -d projecta"]
       interval: 3s
@@ -23,9 +30,11 @@ services:
     environment:
       POSTGRES_DB: projectb
       POSTGRES_USER: projectb
-      POSTGRES_PASSWORD: <POSTGRES_PASSWORD>
+      POSTGRES_PASSWORD: "${POSTGRES_PASSWORD}"
     ports:
       - "5434:5432"
+    volumes:
+      - db_b_data:/var/lib/postgresql/data
     healthcheck:
       test: ["CMD-SHELL", "pg_isready -U projectb -d projectb"]
       interval: 3s
@@ -36,29 +45,31 @@ services:
     build:
       context: .
       dockerfile: projecta_api/Dockerfile
+    env_file:
+      - .env
     depends_on:
       db_a:
         condition: service_healthy
       redis:
-        condition: service_started
+        condition: service_healthy
     environment:
       DJANGO_DEBUG: "1"
-      DJANGO_SECRET_KEY: "<DJANGO_SECRET_KEY>"
-      DJANGO_ALLOWED_HOSTS: "127.0.0.1,localhost"
+      DJANGO_ALLOWED_HOSTS: "127.0.0.1,localhost,projecta_api"
 
       DJANGO_DB_ENGINE: "django.db.backends.postgresql"
       DJANGO_DB_NAME: "projecta"
       DJANGO_DB_USER: "projecta"
-      DJANGO_DB_PASSWORD: "<POSTGRES_PASSWORD>"
+      DJANGO_DB_PASSWORD: "${POSTGRES_PASSWORD}"
       DJANGO_DB_HOST: "db_a"
       DJANGO_DB_PORT: "5432"
 
       CELERY_BROKER_URL: "redis://redis:6379/0"
       CELERY_RESULT_BACKEND: "redis://redis:6379/0"
 
-      PROJECTB_BASE_URL: "http://projectb_api:8001"
+      # Use RFC-compliant hostname (no underscores) for internal service-to-service calls
+      PROJECTB_BASE_URL: "http://projectbapi:8001"
       PROJECTB_SERVICE_USERNAME: "service_a"
-      PROJECTB_SERVICE_PASSWORD: "<PROJECTB_SERVICE_PASSWORD>"
+      PROJECTB_SERVICE_PASSWORD: "${PROJECTB_SERVICE_PASSWORD}"
     ports:
       - "8000:8000"
     command: >
@@ -69,28 +80,31 @@ services:
     build:
       context: .
       dockerfile: projecta_api/Dockerfile
+    env_file:
+      - .env
     depends_on:
-      projecta_api:
-        condition: service_started
+      db_a:
+        condition: service_healthy
       redis:
+        condition: service_healthy
+      projecta_api:
         condition: service_started
     environment:
       DJANGO_DEBUG: "1"
-      DJANGO_SECRET_KEY: "<DJANGO_SECRET_KEY>"
 
       DJANGO_DB_ENGINE: "django.db.backends.postgresql"
       DJANGO_DB_NAME: "projecta"
       DJANGO_DB_USER: "projecta"
-      DJANGO_DB_PASSWORD: "<POSTGRES_PASSWORD>"
+      DJANGO_DB_PASSWORD: "${POSTGRES_PASSWORD}"
       DJANGO_DB_HOST: "db_a"
       DJANGO_DB_PORT: "5432"
 
       CELERY_BROKER_URL: "redis://redis:6379/0"
       CELERY_RESULT_BACKEND: "redis://redis:6379/0"
 
-      PROJECTB_BASE_URL: "http://projectb_api:8001"
+      PROJECTB_BASE_URL: "http://projectbapi:8001"
       PROJECTB_SERVICE_USERNAME: "service_a"
-      PROJECTB_SERVICE_PASSWORD: "<PROJECTB_SERVICE_PASSWORD>"
+      PROJECTB_SERVICE_PASSWORD: "${PROJECTB_SERVICE_PASSWORD}"
     command: >
       sh -c "celery -A config.celery:app worker -l info"
 
@@ -98,25 +112,31 @@ services:
     build:
       context: .
       dockerfile: projectb_api/Dockerfile
+    env_file:
+      - .env
     depends_on:
       db_b:
         condition: service_healthy
       redis:
-        condition: service_started
+        condition: service_healthy
     environment:
       DJANGO_DEBUG: "1"
-      DJANGO_SECRET_KEY: "<DJANGO_SECRET_KEY>"
-      DJANGO_ALLOWED_HOSTS: "127.0.0.1,localhost"
+      # Allow the RFC-compliant alias that other containers use to call this service:
+      DJANGO_ALLOWED_HOSTS: "127.0.0.1,localhost,projectbapi"
 
       DJANGO_DB_ENGINE: "django.db.backends.postgresql"
       DJANGO_DB_NAME: "projectb"
       DJANGO_DB_USER: "projectb"
-      DJANGO_DB_PASSWORD: "<POSTGRES_PASSWORD>"
+      DJANGO_DB_PASSWORD: "${POSTGRES_PASSWORD}"
       DJANGO_DB_HOST: "db_b"
       DJANGO_DB_PORT: "5432"
 
       CELERY_BROKER_URL: "redis://redis:6379/0"
       CELERY_RESULT_BACKEND: "redis://redis:6379/0"
+    networks:
+      default:
+        aliases:
+          - projectbapi
     ports:
       - "8001:8001"
     command: >
@@ -127,19 +147,22 @@ services:
     build:
       context: .
       dockerfile: projectb_api/Dockerfile
+    env_file:
+      - .env
     depends_on:
-      projectb_api:
-        condition: service_started
+      db_b:
+        condition: service_healthy
       redis:
+        condition: service_healthy
+      projectb_api:
         condition: service_started
     environment:
       DJANGO_DEBUG: "1"
-      DJANGO_SECRET_KEY: "<DJANGO_SECRET_KEY>"
 
       DJANGO_DB_ENGINE: "django.db.backends.postgresql"
       DJANGO_DB_NAME: "projectb"
       DJANGO_DB_USER: "projectb"
-      DJANGO_DB_PASSWORD: "<POSTGRES_PASSWORD>"
+      DJANGO_DB_PASSWORD: "${POSTGRES_PASSWORD}"
       DJANGO_DB_HOST: "db_b"
       DJANGO_DB_PORT: "5432"
 
@@ -156,3 +179,7 @@ services:
     ports:
       - "5173:5173"
     command: sh -c "npm install && npm run dev -- --host 0.0.0.0"
+
+volumes:
+  db_a_data:
+  db_b_data:

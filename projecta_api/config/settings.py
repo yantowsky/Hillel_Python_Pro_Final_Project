@@ -23,12 +23,14 @@ INSTALLED_APPS = [
     'django.contrib.staticfiles',
 
     'rest_framework',
+    'corsheaders',
 
     'accounts',
     'core.apps.CoreConfig',
 ]
 
 MIDDLEWARE = [
+    'corsheaders.middleware.CorsMiddleware',
     'django.middleware.security.SecurityMiddleware',
     'django.contrib.sessions.middleware.SessionMiddleware',
     'django.middleware.common.CommonMiddleware',
@@ -108,3 +110,8 @@ CELERY_RESULT_BACKEND = os.getenv("CELERY_RESULT_BACKEND", CELERY_BROKER_URL)
 PROJECTB_BASE_URL = os.getenv("PROJECTB_BASE_URL", "http://127.0.0.1:8001")
 PROJECTB_SERVICE_USERNAME = os.getenv("PROJECTB_SERVICE_USERNAME", "<PROJECTB_SERVICE_USERNAME>")
 PROJECTB_SERVICE_PASSWORD = os.getenv("PROJECTB_SERVICE_PASSWORD", "<PROJECTB_SERVICE_PASSWORD>")
+
+CORS_ALLOWED_ORIGINS = [
+    "http://127.0.0.1:5173",
+    "http://localhost:5173",
+]
