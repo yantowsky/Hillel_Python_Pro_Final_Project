@@ -135,7 +135,7 @@ docker compose exec projectb_api python manage.py changepassword service_a
 - `POST /api/telemed/conversations/` - створення бесіди
 - `GET /api/telemed/conversations/{id}/messages/` - повідомлення бесіди
 - `POST /api/telemed/conversations/{id}/messages/` - надіслати повідомлення
-
+с
 ## Тестування
 
 ### Запуск тестів
